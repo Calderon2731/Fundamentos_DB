@@ -43,7 +43,7 @@ FOREIGN KEY(id_correos_cliente) REFERENCES CORREOS_CLIENTES (id_correos_cliente)
 CREATE TABLE TIPO_CLIENTE(
 id_tipo_cliente INT IDENTITY (1,1) PRIMARY KEY,
 tipo VARCHAR (20) NOT NULL CHECK (tipo IN ('frecuente','ocasional'))
-)
+);
 ---------------------------------------------------------------------------
 
 ------------------ TRABAJADOR ------------------
@@ -96,9 +96,29 @@ tipo VARCHAR (20) NOT NULL CHECK (tipo IN ('frecuente','ocasional'))
 
 ---------------------------------------------------------------------------
 
+
 ------------------ PROVEEDOR ------------------
 ---------ESCRIBIR TABLAS PROVEEDOR, TELEFONOS_PROVEEDOR, CORREOS_PROVEEDOR, PROVEEDORES_PRODUCTOS,
 ---------------------------------------------------------------------------
+ CREATE TABLE PROVEEDOR(
+  id_proveedor INT IDENTITY(1,1) PRIMARY KEY,
+  nombre VARCHAR(20),
+  email VARCHAR(20)
+ );
+
+ CREATE TABLE TELEFONOS_PROVEEDOR(
+  id_telefonos_proveedor INT IDENTITY(1,1) PRIMARY KEY,
+  id_proveedor INT,
+  FOREIGN KEY (id_proveedor) REFERENCES PROVEEDOR (id_proveedor)
+ );
+
+ CREATE TABLE PROVEEDORES_PRODUCTOS(
+  id_proveedor_producto INT IDENTITY(1,1) PRIMARY KEY,
+  id_proveedor INT,
+  codigo_producto INT,
+  FOREIGN KEY (id_proveedor) REFERENCES PROVEEDOR (id_proveedor),
+  FOREIGN KEY (codigo_producto) REFERENCES PRODUCTO (codigo_producto),
+ )
 
 ------------------ SERVICIO ------------------
 CREATE TABLE SERVICIO(
@@ -111,7 +131,7 @@ estado_servicio VARCHAR(20) NOT NULL, --CHECK (estado_servicio IN ('HAY QUE VER 
 FOREIGN KEY (id_vehiculo) REFERENCES VEHICULO (id_vehiculo),
 FOREIGN KEY (id_trabajador) REFERENCES TRABAJADOR (id_trabajador),
 FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura),
-)
+);
 
 CREATE TABLE SERVICIO_FACTURA(
 id_servicio_factura INT IDENTITY (1,1) PRIMARY KEY,
@@ -119,7 +139,7 @@ id_servicio INT NOT NULL, --FK
 id_factura INT NOT NULL, --FK
 FOREIGN KEY (id_servicio) REFERENCES SERVICIO (id_servicio),
 FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura)
-)
+);
 ---------------------------------------------------------------------------
 
 ------------------ VEHICULO ------------------
@@ -136,17 +156,17 @@ marca VARCHAR(20) NOT NULL,
 FOREIGN KEY (id_tipo_vehiculo) REFERENCES TIPO_VEHICULO (id_tipo_vehiculo),
 FOREIGN KEY (id_cliente) REFERENCES CLIENTE (id_cliente),
 FOREIGN KEY (id_fecha_cambio_aceite) REFERENCES FECHA_CAMBIO_ACEITE (id_fecha_cambio_aceite)
-)
+);
 
 CREATE TABLE TIPO_VEHICULO(
 id_tipo_vehiculo INT IDENTITY (1,1) PRIMARY KEY,
 tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('carro', 'moto')),
-)
+);
 
 CREATE TABLE FECHA_CAMBIO_ACEITE(
 id_fecha_cambio_aceite INT IDENTITY (1,1) PRIMARY KEY,
 fecha DATE NOT NULL
-)
+);
 ---------------------------------------------------------------------------
 
 ------------------ FACTURACION ------------------
@@ -157,7 +177,7 @@ monto_total INT NOT NULL,
 estado_pago VARCHAR(10) NOT NULL CHECK (estado_pago IN ('pagado', 'pendiente')),
 fecha_emision DATE NOT NULL
 FOREIGN KEY (id_cliente) REFERENCES CLIENTE (id_cliente)
-)
+);
 
 CREATE TABLE METODOS_PAGO(
 id_metodo_pago INT IDENTITY (1,1) PRIMARY KEY,
@@ -170,14 +190,39 @@ id_factura INT NOT NULL, --FK
 id_metodo_pago INT NOT NULL --FK
 FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura),
 FOREIGN KEY (id_metodo_pago) REFERENCES METODOS_PAGO (id_metodo_pago)
-)
+);
 ---------------------------------------------------------------------------
 
 ------------------ CITA ------------------
 ---------ESCRIBIR TABLA CITA
 ---------------------------------------------------------------------------
+CREATE TABLE CITA(
+ id_cita INT IDENTITY (1,1) PRIMARY KEY,
+ id_cliente INT,
+ estado_cita VARCHAR(20),
+ fecha DATE,
+ hora TIME
+ FOREIGN KEY (id_cliente) REFERENCES CLIENTE (id_cliente)
+)
 
 ------------------ PRODUCTO ------------------
 ---------ESCRIBIR TABLAS PRODUCTO, PRODUTO_FACTURA
----------------------------------------------------------------------------
 
+ CREATE TABLE PRODUCTO(
+  codigo_producto INT IDENTITY(1,1) PRIMARY KEY,
+  nombre VARCHAR(20)
+ )
+
+ CREATE TABLE PRODUCTO_FACTURA(
+  id_producto_factura INT IDENTITY(1,1) PRIMARY KEY,
+  codigo_producto INT,
+  id_factura INT,
+  FOREIGN KEY (codigo_producto) REFERENCES PRODUCTO (codigo_producto),
+  FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura)
+ )
+
+
+
+
+
+---------------------------------------------------------------------------
