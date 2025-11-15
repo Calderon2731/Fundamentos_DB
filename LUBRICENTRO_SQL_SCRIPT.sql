@@ -144,14 +144,14 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 
  CREATE TABLE PRODUCTO(
   codigo_producto INT IDENTITY(1,1),
-  nombre VARCHAR(20),
+  nombre VARCHAR(20) NOT NULL,
   CONSTRAINT PK_PRODUCTO PRIMARY KEY(codigo_producto)
  );
 
  CREATE TABLE PRODUCTO_FACTURA(
   id_producto_factura INT IDENTITY(1,1),
-  codigo_producto INT,
-  id_factura INT,
+  codigo_producto INT NOT NULL,
+  id_factura INT NOT NULL,
   CONSTRAINT PK_PRODUCTO_FACTURA PRIMARY KEY(id_producto_factura),
   CONSTRAINT FK_PRODUCTO_FACT FOREIGN KEY (codigo_producto) REFERENCES PRODUCTO (codigo_producto),
   CONSTRAINT FK_FACTURA_PRODUCTO FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura)
@@ -163,22 +163,29 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 ---------------------------------------------------------------------------
 	 CREATE TABLE PROVEEDORES(
 	  id_proveedor INT IDENTITY(1,1) ,
-	  nombre VARCHAR(20),
-	  email VARCHAR(20),
+	  nombre VARCHAR(20) NOT NULL,
+	  email VARCHAR(20) NOT NULL,
 	   CONSTRAINT PK_PROVEEDORES PRIMARY KEY( id_proveedor)
 	 );
 
 	 CREATE TABLE TELEFONOS_PROVEEDOR(
 	  id_telefonos_proveedor INT IDENTITY(1,1),
-	  id_proveedor INT,
+	  id_proveedor INT NOT NULL,
 	  CONSTRAINT PK_TELEFONOS_PROVEEDOR PRIMARY KEY( id_telefonos_proveedor),
 	  CONSTRAINT FK_PROVEEDORES_TELEFONOS FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES (id_proveedor)
 	 );
 
+	 CREATE TABLE CORREOS_PROVEEDOR(
+	  id_correos_proveedor INT IDENTITY(1,1),
+	  id_proveedor INT NOT NULL,
+	  CONSTRAINT PK_CORREOS_PROVEEDOR PRIMARY KEY( id_correos_proveedor),
+	  CONSTRAINT FK_PROVEEDORES_CORREOS FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES (id_proveedor)
+	 );
+
 	 CREATE TABLE PROVEEDORES_PRODUCTOS(
 	  id_proveedor_producto INT IDENTITY(1,1),
-	  id_proveedor INT,
-	  codigo_producto INT,
+	  id_proveedor INT NOT NULL,
+	  codigo_producto INT NOT NULL,
 	  CONSTRAINT PK_PROVEEDORES_PRODUCTOS PRIMARY KEY(id_proveedor_producto),
 	 CONSTRAINT FK_PROVEEDORES FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES (id_proveedor),
 	 CONSTRAINT FK_PRODUCTO_PROVEEDORRES FOREIGN KEY (codigo_producto) REFERENCES PRODUCTO (codigo_producto),
@@ -206,7 +213,7 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 	color VARCHAR(20) NOT NULL,
 	modelo VARCHAR(20) NOT NULL,
 	numero_puertas INT NOT NULL,
-	a�o INT NOT NULL,
+	anno INT NOT NULL,
 	marca VARCHAR(20) NOT NULL,
 	CONSTRAINT PK_VEHICULO PRIMARY KEY(id_vehiculo),
 	CONSTRAINT FK_TIPO_VEHICULO FOREIGN KEY (id_tipo_vehiculo) REFERENCES TIPO_VEHICULO (id_tipo_vehiculo),
@@ -219,10 +226,10 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 ---------------------------------------------------------------------------
 	CREATE TABLE CITA(
 	 id_cita INT IDENTITY (1,1),
-	 id_cliente INT,
-	 estado_cita VARCHAR(20),
-	 fecha DATE,
-	 hora TIME,
+	 id_cliente INT NOT NULL,
+	 estado_cita VARCHAR(20) NOT NULL CHECK(estado_cita IN ('espera','completada')),
+	 fecha DATE NOT NULL,
+	 hora TIME NOT NULL,
 	 CONSTRAINT PK_CITA  PRIMARY KEY(id_cita),
 	 CONSTRAINT FK_CLIENTE_CITA FOREIGN KEY (id_cliente) REFERENCES CLIENTE (id_cliente)
 	);
@@ -234,8 +241,8 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 	id_vehiculo INT NOT NULL, --FK
 	id_trabajador INT NOT NULL, --FK
 	id_factura INT NOT NULL, --FK
-	categoria VARCHAR(20) NOT NULL, --CHECK (categoria IN ('HAY QUE VER QUE CATEGORIAS HABRAN'))
-	estado_servicio VARCHAR(20) NOT NULL, --CHECK (estado_servicio IN ('HAY QUE VER QUE estados HABRAN'))
+	categoria VARCHAR(20) NOT NULL CHECK (categoria IN ('preventivo', 'urgencia')),
+	estado_servicio VARCHAR(20) NOT NULL (estado_servicio IN ('completado', 'en proceso', 'sin iniciar')),
 	CONSTRAINT PK_SERVICIO  PRIMARY KEY(id_servicio),
 	CONSTRAINT FK_VEHICULO_SERVICIO FOREIGN KEY (id_vehiculo) REFERENCES VEHICULO (id_vehiculo),
 	CONSTRAINT FK_TRABAJADORES_SERVICIO FOREIGN KEY (id_trabajador) REFERENCES TRABAJADORES (id_trabajador),
