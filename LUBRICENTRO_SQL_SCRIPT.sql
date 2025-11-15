@@ -235,3 +235,4 @@ FOREIGN KEY (id_servicio) REFERENCES SERVICIO (id_servicio),
 FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura)
 );
 ---------------------------------------------------------------------------
+---
