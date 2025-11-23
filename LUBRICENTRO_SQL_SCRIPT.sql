@@ -157,30 +157,48 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
   CONSTRAINT FK_FACTURA_PRODUCTO FOREIGN KEY (id_factura) REFERENCES FACTURA (id_factura)
  );
 
-
+ 	 
 ------------------ PROVEEDOR ------------------
 
 	 CREATE TABLE PROVEEDORES(
 	  id_proveedor INT IDENTITY(1,1) ,
-	  nombre VARCHAR(20) NOT NULL,
-	  email VARCHAR(20) NOT NULL,
-	   CONSTRAINT PK_PROVEEDORES PRIMARY KEY( id_proveedor)
+	  nombre VARCHAR(20) NOT NULL,	  
+	  CONSTRAINT PK_PROVEEDORES PRIMARY KEY(id_proveedor)
 	 );
 
+	 --TABLA TELEFONOS
 	 CREATE TABLE TELEFONOS_PROVEEDOR(
 	  id_telefonos_proveedor INT IDENTITY(1,1),
-	  id_proveedor INT NOT NULL,
-	  CONSTRAINT PK_TELEFONOS_PROVEEDOR PRIMARY KEY( id_telefonos_proveedor),
-	  CONSTRAINT FK_PROVEEDORES_TELEFONOS FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES (id_proveedor)
+	  telefono INT NOT NULL,
+	  CONSTRAINT PK_TELEFONOS_PROVEEDOR PRIMARY KEY(id_telefonos_proveedor)
 	 );
 
+	--TABLA INTERMEDIA TELFONOS
+	 CREATE TABLE TELEFONOS_PROVEEDOR_PROVEEDOR(
+		id_telefonos_proveedor_proveedor INT IDENTITY(1,1) ,
+		id_telefonos_proveedor INT NOT NULL,
+		id_proveedor INT NOT NULL,
+		CONSTRAINT PK_TELEFONOS_PROVEEDOR_PROVEEDOR PRIMARY KEY(id_telefonos_proveedor_proveedor),
+		CONSTRAINT FK_TELEFONOS_PROVEEDOR FOREIGN KEY (id_telefonos_proveedor) REFERENCES TELEFONOS_PROVEEDOR(id_telefonos_proveedor),
+		CONSTRAINT FK_PROVEEDOR_TELEFONO FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES(id_proveedor)
+
+	--TABLA CORREOS
 	 CREATE TABLE CORREOS_PROVEEDOR(
 	  id_correos_proveedor INT IDENTITY(1,1),
-	  id_proveedor INT NOT NULL,
-	  CONSTRAINT PK_CORREOS_PROVEEDOR PRIMARY KEY( id_correos_proveedor),
-	  CONSTRAINT FK_PROVEEDORES_CORREOS FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES (id_proveedor)
+	  correo INT NOT NULL,
+	  CONSTRAINT PK_CORREOS_PROVEEDOR PRIMARY KEY(id_correos_proveedor)
 	 );
 
+	 --TABLA INTERMEDIA CORREOS
+	  CREATE TABLE CORREOS_PROVEEDOR_PROVEEDOR(
+		id_correos_proveedor_proveedor INT IDENTITY(1,1) ,
+		id_correos_proveedor INT NOT NULL,
+		id_proveedor INT NOT NULL,
+		CONSTRAINT PK_CORREOS_PROVEEDOR_PROVEEDOR PRIMARY KEY(id_correos_proveedor_proveedor),
+		CONSTRAINT FK_CORREOS_PROVEEDOR FOREIGN KEY (id_correos_proveedor) REFERENCES CORREOS_PROVEEDOR(id_correos_proveedor),
+		CONSTRAINT FK_PROVEEDOR_CORREOS FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES(id_proveedor)
+
+	--TABLA PROVEEDORES PRODUCTOS
 	 CREATE TABLE PROVEEDORES_PRODUCTOS(
 	  id_proveedor_producto INT IDENTITY(1,1),
 	  id_proveedor INT NOT NULL,
@@ -189,8 +207,6 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 	 CONSTRAINT FK_PROVEEDORES FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES (id_proveedor),
 	 CONSTRAINT FK_PRODUCTO_PROVEEDORRES FOREIGN KEY (codigo_producto) REFERENCES PRODUCTO (codigo_producto),
 	 );
-
-	 
 
 ------------------ VEHICULO ------------------
 
@@ -270,7 +286,7 @@ CREATE PROCEDURE SP_INSERT_TRABAJADOR
     @apellido_1 VARCHAR(20),
     @apellido_2 VARCHAR(20),
     @telefono INT,
-    @email VARCHAR(50)
+    @email VARCHAR(100)
 AS
 BEGIN
 -- Declarar IDs para asignarlos bien
@@ -278,7 +294,7 @@ BEGIN
 	DECLARE @id_trabajador INT;
 	DECLARE @id_telefono_trabajador INT;
 	DECLARE @id_email_trabajador INT;
-
+	
 -- Insertar Rol
 
 	IF NOT EXISTS (SELECT 1 FROM ROL_TRABAJADOR WHERE rol = @rol)
@@ -324,27 +340,24 @@ END;
 CREATE PROCEDURE SP_DELETE_TRABAJADOR
 	@id_trabajador INT,
 	@id_email_trabajador INT,
-	@id_telefono_trabajador INT,
-	@id_rol_trabajador INT
+	@id_telefono_trabajador INT
+	--@id_rol_trabajador INT
 AS
 BEGIN 
 	-- Eliminar relacion de emails
 	DELETE FROM EMAIL_TRABAJADORES_TRABAJADORES WHERE id_trabajador = @id_trabajador
-
+	
 	-- Eliminar relacion de telefonos
 	DELETE FROM TELEFONOS_TRABAJADORES_TRABAJADORES WHERE id_trabajador = @id_trabajador
-
+	
 	-- Eliminar email
 	DELETE FROM EMAIL_TRABAJADORES WHERE id_email_trabajador = @id_email_trabajador
 
-	-- Eliminar email
-	DELETE FROM TELEFONOS_TRABAJADORES WHERE id_telefono_trabajador = @id_telefono_trabajador
+	-- Eliminar telefono
+	DELETE FROM TELEFONOS_TRABAJADORES WHERE id_telefono_trabajador = @id_trabajador
 
 	-- Eliminar trabajador
 	DELETE FROM TRABAJADORES WHERE id_trabajador = @id_trabajador
-
-	-- Eliminar rol
-	DELETE FROM ROL_TRABAJADOR WHERE id_rol_trabajador = @id_rol_trabajador
 
 END;
 
@@ -355,7 +368,7 @@ CREATE PROCEDURE SP_UPDATE_TRABAJADORES_INFO_PERSONAL
 	@apellido_1 VARCHAR(20),
 	@apellido_2 VARCHAR(20),
 	@telefono INT,
-	@email VARCHAR(50)
+	@email VARCHAR(100)
 AS 
 BEGIN
 	-- Actualizar telefono
@@ -393,11 +406,21 @@ BEGIN
 	DECLARE @id_correos_cliente INT;
 
 -- Insertar tipo de cliente, CHECK 'frecuente' , 'ocasional'
-	INSERT INTO TIPO_CLIENTE (tipo)
-	VALUES (@tipo)
 
-	SET @id_tipo_cliente = SCOPE_IDENTITY();
+	IF NOT EXISTS (SELECT 1 FROM TIPO_CLIENTE WHERE tipo = @tipo)
+	BEGIN
+		INSERT INTO TIPO_CLIENTE (tipo)
+		VALUES (@tipo)
 
+		SET @id_tipo_cliente = SCOPE_IDENTITY();
+	END	
+	ELSE
+	BEGIN
+		SELECT @id_tipo_cliente = id_tipo_cliente
+		FROM TIPO_CLIENTE
+		WHERE tipo = @tipo
+	END
+	
 -- Insertar cliente
 	INSERT INTO CLIENTE (id_tipo_cliente, nombre, apellido_1, apellido_2)
 	VALUES (@id_tipo_cliente, @nombre, @apellido_1, @apellido_2)
@@ -424,6 +447,7 @@ BEGIN
 	INSERT INTO TELEFONO_CLIENTE_CLIENTE (id_cliente, id_telefono_cliente)
 	values (@id_cliente, @id_telefono_cliente)
 END;
+
 
 ------------------ DELETE CLIENTES ------------------
 CREATE PROCEDURE SP_DELETE_CLIENTE
@@ -452,7 +476,7 @@ BEGIN
     DELETE FROM TIPO_CLIENTE WHERE id_tipo_cliente = @id_tipo_cliente;
 END;
 
------------------- UPDATE TRABAJADORES INFO PERSONAL ------------------
+------------------ UPDATE CLIENTES INFO PERSONAL ------------------
 CREATE PROCEDURE SP_UPDATE_CLIENTE_INFO
     @id_cliente INT,
     @nombre VARCHAR(20),
@@ -483,7 +507,7 @@ END;
 ------------------ INSERT PROVEEDORES ------------------
 CREATE PROCEDURE SP_INSERT_PROVEEDOR
     @nombre VARCHAR(20),
-    @email VARCHAR(20),
+    @correo VARCHAR(20),
     @telefono VARCHAR(20),
     @codigo_producto INT
 AS
@@ -495,22 +519,30 @@ BEGIN
     DECLARE @id_proveedor_producto INT;
 
     -- Insertar proveedor
-    INSERT INTO PROVEEDORES (nombre, email)
-    VALUES (@nombre, @email);
+    INSERT INTO PROVEEDORES (nombre)
+    VALUES (@nombre);
 
     SET @id_proveedor = SCOPE_IDENTITY();
 
     -- Insertar telefono del proveedor
-    INSERT INTO TELEFONOS_PROVEEDOR (id_proveedor)
-    VALUES (@id_proveedor);
+    INSERT INTO TELEFONOS_PROVEEDOR (telefono)
+    VALUES (@telefono);
 
     SET @id_telefonos_proveedor = SCOPE_IDENTITY();
 
     -- Insertar correo del proveedor
-    INSERT INTO CORREOS_PROVEEDOR (id_proveedor)
-    VALUES (@id_proveedor);
+    INSERT INTO CORREOS_PROVEEDOR (correo)
+    VALUES (@correo);
 
     SET @id_correos_proveedor = SCOPE_IDENTITY();
+
+	-- Insertar relacion correo con proveedor
+	INSERT INTO CORREOS_PROVEEDOR_PROVEEDOR (id_proveedor, id_correos_proveedor)
+	VALUES (@id_proveedor, @id_correos_proveedor)
+
+	-- Insertar relacion telefono con proveedor
+	INSERT INTO TELEFONOS_PROVEEDOR_PROVEEDOR (id_proveedor, id_telefonos_proveedor)
+	VALUES (@id_proveedor, @id_telefonos_proveedor)
 
     -- Insertar relacion proveedor-producto
     INSERT INTO PROVEEDORES_PRODUCTOS (id_proveedor, codigo_producto)
@@ -598,6 +630,7 @@ BEGIN
     SET nombre = @nombre
     WHERE codigo_producto = @codigo_producto;
 END;
+
 
 ---------------------------------------------------------------------------
 ------------------------- GENERACION DE REGISTROS ------------------------- 
@@ -705,6 +738,7 @@ EXEC SP_INSERT_CLIENTES @tipo='ocasional', @nombre='Ricardo', @apellido_1='Solan
 EXEC SP_INSERT_CLIENTES @tipo='frecuente', @nombre='Andrés', @apellido_1='Alvarado', @apellido_2='Jiménez', @telefono='80101786', @correo_electronico='andrés.alvarado49@gmail.com';
 EXEC SP_INSERT_CLIENTES @tipo='ocasional', @nombre='Luis', @apellido_1='Solano', @apellido_2='Mora', @telefono='83928164', @correo_electronico='luis.solano50@gmail.com';
 
+
 ----------------------- PROVEEDORES -----------------------
 EXEC SP_INSERT_PROVEEDOR @nombre='CarZone1', @email='contacto@carzone1.com', @telefono='88715460', @codigo_producto=1;
 EXEC SP_INSERT_PROVEEDOR @nombre='LubricantesGlobal2', @email='contacto@lubricantesglobal2.cr', @telefono='83925394', @codigo_producto=2;
@@ -808,8 +842,3 @@ EXEC SP_INSERT_PRODUCTO @nombre='FiltroAceite47', @id_factura=47;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteDiesel48', @id_factura=48;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteGasolina49', @id_factura=49;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteCaja50', @id_factura=50;
-
-SELECT * FROM TRABAJADORES;
-SELECT * FROM CLIENTE;
-SELECT * FROM PROVEEDORES;
-SELECT * FROM PRODUCTO;
