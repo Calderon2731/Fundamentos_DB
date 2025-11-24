@@ -2,7 +2,7 @@
 
 CREATE DATABASE LUBRICENTRO_LOS_ANGELES;
 
---USE LUBRICENTRO_LOS_ANGELES;
+USE LUBRICENTRO_LOS_ANGELES;
 
 
 ---------------------------------------------------------------------------
@@ -842,3 +842,120 @@ EXEC SP_INSERT_PRODUCTO @nombre='FiltroAceite47', @id_factura=47;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteDiesel48', @id_factura=48;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteGasolina49', @id_factura=49;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteCaja50', @id_factura=50;
+
+ ----- VISTAS
+CREATE VIEW v_clientes
+AS
+ SELECT nombre,apellido_1,apellido_2 
+ FROM CLIENTE;
+
+ --- tablas : TRABAJADORES, ROL_TRABAJDOR
+ CREATE VIEW v_trabajadores
+ AS
+ SELECT 
+ t.nombre,
+ t.apellido_1,
+ t.apellido_2,
+ r.rol
+FROM TRABAJADORES t
+INNER JOIN ROL_TRABAJADOR r
+	ON	t.id_trabajador = r.id_rol_trabajador;
+
+	---tablas: CLIENTE Y FACTURAS
+ CREATE VIEW v_clientesFacturas 
+ AS
+ SELECT
+ c.id_cliente,
+ c.nombre,
+ c.apellido_1,
+ c.apellido_2,
+ f.monto_total,
+ f.fecha_emision
+ FROM CLIENTE c
+ INNER JOIN FACTURA f
+	ON c.id_cliente = f.id_cliente;
+
+	---tablas: FACTURAS, SERVICIOS, CLIENTE, SERVICIO_FACTURA
+  CREATE VIEW V_Facturas_Servicios_Clientes
+  AS
+  SELECT
+  f.id_factura,
+  f.fecha_emision,
+  f.monto_total,
+  f.estado_pago,
+  c.id_cliente,
+  c.nombre AS nombre_cliente,
+  c.apellido_1,
+  c.apellido_2,
+  s.id_servicio,
+  s.categoria,
+  s.estado_servicio
+  FROM FACTURA f
+  INNER JOIN CLIENTE c
+  ON f.id_cliente = c.id_cliente
+  INNER JOIN SERVICIO_FACTURA sf
+  ON f.id_factura = sf.id_factura
+  INNER JOIN SERVICIO s
+  ON sf.id_servicio = s.id_servicio;
+
+  ---tablas: TELEFONO_CLIENTE_CLIENTE, CORREOS_CLIENTES_CLIENTE, CLIENTE
+  CREATE VIEW  v_telefonos_clientes_correos
+  AS
+  SELECT 
+  c.id_cliente,
+  c.nombre,
+  c.apellido_1,
+  c.apellido_2,
+  tc.telefono,
+  ce.correo_electronico
+  FROM CLIENTE c
+  INNER JOIN TELEFONO_CLIENTE_CLIENTE tcc
+  ON c.id_cliente = tcc.id_Cliente
+  INNER JOIN TELEFONOS_CLIENTE tc
+  ON tcc.id_cliente = tc.id_Telefono_Cliente
+  INNER JOIN CORREOS_CLIENTES_CLIENTE ccc
+  ON c.id_cliente = ccc.id_cliente
+  INNER JOIN CORREOS_CLIENTES ce
+  ON ccc.id_correos_cliente = ce.id_correos_cliente;
+
+	SELECT COLUMN_NAME
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'VEHICULO';
+
+
+
+  CREATE VIEW v_Vehiculos_Clientes
+  AS
+  SELECT 
+  v.id_vehiculo, 
+  v.marca,
+  v.modelo,
+  v.anno,
+  v.color,
+  c.nombre AS nombre_cliente,
+  c.apellido_1,
+  c.apellido_2,
+  tv.tipo AS tipo_vehiculo,
+  fca.fecha AS id_fecha_cambio_aceite
+  FROM VEHICULO v
+  INNER JOIN CLIENTE c
+  ON v.id_cliente = c.id_cliente
+  INNER JOIN TIPO_VEHICULO tv
+  ON v.id_tipo_vehiculo = tv.id_tipo_vehiculo
+  INNER JOIN FECHA_CAMBIO_ACEITE fca
+  ON v.id_fecha_cambio_aceite = fca.id_fecha_cambio_aceite
+
+
+ SELECT * FROM v_trabajadores;
+	
+ SELECT * FROM v_clientesFacturas ;
+
+ SELECT * FROM V_Facturas_Servicios_Clientes;
+
+ SELECT * FROM v_telefonos_clientes_correos;
+
+ SELECT * FROM v_Vehiculos_Clientes;
+
+
+
+
