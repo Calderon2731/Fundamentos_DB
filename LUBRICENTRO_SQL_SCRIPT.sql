@@ -843,7 +843,9 @@ EXEC SP_INSERT_PRODUCTO @nombre='AceiteDiesel48', @id_factura=48;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteGasolina49', @id_factura=49;
 EXEC SP_INSERT_PRODUCTO @nombre='AceiteCaja50', @id_factura=50;
 
- ----- VISTAS
+----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+ ------------------------VISTAS----------------------------------------------------------------
 CREATE VIEW v_clientes
 AS
  SELECT nombre,apellido_1,apellido_2 
@@ -945,17 +947,116 @@ WHERE TABLE_NAME = 'VEHICULO';
   INNER JOIN FECHA_CAMBIO_ACEITE fca
   ON v.id_fecha_cambio_aceite = fca.id_fecha_cambio_aceite
 
-
  SELECT * FROM v_trabajadores;
 	
- SELECT * FROM v_clientesFacturas ;
+ SELECT * FROM v_clientesFacturas;
 
  SELECT * FROM V_Facturas_Servicios_Clientes;
 
  SELECT * FROM v_telefonos_clientes_correos;
 
  SELECT * FROM v_Vehiculos_Clientes;
+ ----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+ ------------------------Funciones----------------------------------------------------------------
+ --funcion 1(calcula el IVA)
 
+ CREATE FUNCTION fn_CalcularIVA (@monto DECIMAL(10,2))
+	RETURNS DECIMAL(10,2)
+	AS
+	BEGIN
+		RETURN @monto * 0.13;
+	END;
+---funcion 2 (Estima si es cliente frecuente o no)
+	CREATE FUNCTION fn_ClienteFrecuente (@IdCliente INT)
+	RETURNS VARCHAR(20)
+	AS
+	BEGIN
+		DECLARE @Respuesta VARCHAR(20);
 
+		IF (
+			SELECT COUNT(*) 
+			FROM FACTURA 
+			WHERE id_cliente = @IdCliente
+		) >= 3
+			SET @Respuesta = 'FRECUENTE';
+		ELSE
+			SET @Respuesta = 'NO FRECUENTE';
 
+		RETURN @Respuesta;
+	END;
 
+---funcion 3 (Calcula el precio final, sumado con IVA)
+	CREATE FUNCTION fn_PrecioFinal(@precio DECIMAL(10,2))
+	RETURNS DECIMAL(10,2)
+	AS
+	BEGIN
+		DECLARE @precioFinal DECIMAL(10,2);
+
+		SET @precioFinal = @precio + (@precio * 0.13);
+
+		RETURN @precioFinal;
+	END;
+
+---funcion 4
+	CREATE FUNCTION fn_CantidadVehiculosCliente (@IdCliente INT)
+	RETURNS INT
+	AS
+	BEGIN
+		DECLARE @Cantidad INT;
+
+		SELECT @Cantidad = COUNT(*)
+		FROM VEHICULO
+		WHERE id_cliente = @IdCliente;
+
+		RETURN ISNULL(@Cantidad, 0);
+	END;
+
+---funcion 5
+
+	CREATE FUNCTION fn_TotalGastadoCliente (@IdCliente INT)
+	RETURNS DECIMAL(10,2)
+	AS
+	BEGIN
+		DECLARE @Total DECIMAL(10,2);
+
+		SELECT @Total = SUM(CAST(f.monto_total AS DECIMAL(10,2)))
+		FROM FACTURA f
+		WHERE f.id_cliente = @IdCliente;
+
+		RETURN ISNULL(@Total, 0);
+	END;
+
+	--- FUNCION 6
+
+	CREATE FUNCTION fn_TieneCitaPendiente (@IdCliente INT)
+	RETURNS VARCHAR(20)
+	AS
+	BEGIN
+		DECLARE @Respuesta VARCHAR(20);
+
+		IF EXISTS (
+			SELECT 1
+			FROM CITA
+			WHERE id_cliente = @IdCliente
+			  AND estado_cita = 'espera'
+		)
+			SET @Respuesta = 'TIENE CITA PENDIENTE';
+		ELSE
+			SET @Respuesta = 'SIN CITAS';
+
+		RETURN @Respuesta;
+	END;
+
+	--- es necesario insertar datos primero para poder probar
+	SELECT dbo.fn_CalcularIVA(20000);
+
+	SELECT dbo.fn_ClienteFrecuente(2);
+
+	SELECT dbo.fn_PrecioFinal(45000);
+
+	SELECT dbo.fn_CantidadVehiculosCliente(2);
+
+	SELECT dbo.fn_TotalGastadoCliente(2);
+
+	SELECT dbo.fn_TieneCitaPendiente(3);
