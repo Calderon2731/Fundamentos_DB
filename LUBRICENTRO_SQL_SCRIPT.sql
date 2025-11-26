@@ -181,6 +181,7 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 		CONSTRAINT PK_TELEFONOS_PROVEEDOR_PROVEEDOR PRIMARY KEY(id_telefonos_proveedor_proveedor),
 		CONSTRAINT FK_TELEFONOS_PROVEEDOR FOREIGN KEY (id_telefonos_proveedor) REFERENCES TELEFONOS_PROVEEDOR(id_telefonos_proveedor),
 		CONSTRAINT FK_PROVEEDOR_TELEFONO FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES(id_proveedor)
+		);
 
 	--TABLA CORREOS
 	 CREATE TABLE CORREOS_PROVEEDOR(
@@ -197,6 +198,7 @@ CONSTRAINT FK_CORREOS_CLIENTES FOREIGN KEY(id_correos_cliente) REFERENCES CORREO
 		CONSTRAINT PK_CORREOS_PROVEEDOR_PROVEEDOR PRIMARY KEY(id_correos_proveedor_proveedor),
 		CONSTRAINT FK_CORREOS_PROVEEDOR FOREIGN KEY (id_correos_proveedor) REFERENCES CORREOS_PROVEEDOR(id_correos_proveedor),
 		CONSTRAINT FK_PROVEEDOR_CORREOS FOREIGN KEY (id_proveedor) REFERENCES PROVEEDORES(id_proveedor)
+	);
 
 	--TABLA PROVEEDORES PRODUCTOS
 	 CREATE TABLE PROVEEDORES_PRODUCTOS(
@@ -560,10 +562,10 @@ BEGIN
     DELETE FROM PROVEEDORES_PRODUCTOS WHERE id_proveedor = @id_proveedor;
 
     -- Eliminar correos del proveedor
-    DELETE FROM CORREOS_PROVEEDOR WHERE id_proveedor = @id_proveedor;
+    DELETE FROM CORREOS_PROVEEDOR WHERE id_correos_proveedor = @id_proveedor;
 
     -- Eliminar telefonos del proveedor
-    DELETE FROM TELEFONOS_PROVEEDOR WHERE id_proveedor = @id_proveedor;
+    DELETE FROM TELEFONOS_PROVEEDOR WHERE id_telefonos_proveedor = @id_proveedor;
 
     -- Eliminar proveedor
     DELETE FROM PROVEEDORES WHERE id_proveedor = @id_proveedor;
@@ -578,8 +580,7 @@ AS
 BEGIN
     -- Actualizar datos del proveedor
     UPDATE PROVEEDORES
-    SET nombre = @nombre,
-        email = @email
+    SET nombre = @nombre
     WHERE id_proveedor = @id_proveedor;
 END;
 
@@ -1060,3 +1061,272 @@ WHERE TABLE_NAME = 'VEHICULO';
 	SELECT dbo.fn_TotalGastadoCliente(2);
 
 	SELECT dbo.fn_TieneCitaPendiente(3);
+
+
+	--- TRIGGERS ---
+
+---TRIGGER PARA AUDITAR LOS CAMBIOS EN LA TABLA FACTURA---
+CREATE TABLE AuditoriaFactura (
+    IdAuditoriaFactura INT IDENTITY(1,1) PRIMARY KEY,
+    TipoAccion NVARCHAR(10),
+    IdFactura INT,
+	IdCliente INT,
+    EstadoPago VARCHAR(10),
+    FechaAccion DATETIME DEFAULT GETDATE()
+);
+
+CREATE OR ALTER TRIGGER TGR_AUDITAR_FACTURAS
+ON FACTURA
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+	SET NOCOUNT ON;
+	---INSERT
+	INSERT INTO AuditoriaFactura (TipoAccion,IdFactura, IdCliente, EstadoPago)
+	SELECT 'Insert', i.id_factura, i.id_cliente,  i.estado_pago
+	FROM inserted i
+	WHERE NOT EXISTS (SELECT 1 FROM deleted d WHERE d.id_factura = i.id_factura);
+	---DELETE
+	INSERT INTO AuditoriaFactura (TipoAccion,IdFactura, IdCliente, EstadoPago)
+	SELECT 'Delete', d.id_factura, d.id_cliente,d.estado_pago
+	FROM deleted d
+	WHERE NOT EXISTS (SELECT 1 FROM inserted i WHERE i.id_cliente = d.id_factura);
+	---UPDATE
+	INSERT INTO AuditoriaFactura(TipoAccion,IdFactura, IdCliente, EstadoPago)
+	SELECT 'Update', i.id_factura, i.id_cliente, d.estado_pago
+	FROM inserted i
+	JOIN deleted d
+	ON i.id_factura = d.id_factura
+	WHERE i.id_factura <> d.id_factura
+	OR i.id_cliente <> d.id_cliente;
+END;
+
+-- PRUEBA INSERT --
+INSERT INTO FACTURA (
+    id_cliente,
+    monto_total,
+    cantidad,
+    precio_unitario,
+    estado_pago,
+    fecha_emision
+)
+VALUES (
+    4,              -- id_cliente (debe existir en CLIENTE)
+    1200,          -- monto_total
+    3512,              -- cantidad
+    5232.00,        -- precio_unitario
+    'pagado',    -- estado_pago (solo 'pagado' o 'pendiente')
+    '2025-11-24'    -- fecha_emision
+);
+
+SELECT * FROM AuditoriaFactura
+SELECT * FROM FACTURA
+
+-- PRUEBA DELETE --
+DELETE FROM FACTURA WHERE id_factura = 2
+
+
+
+
+
+---TRIGGER PARA AUDITAR LOS CAMBIOS EN LA TABLA TELEFONOS_CLIENTE---
+CREATE TABLE AuditoriaTelefonosCliente (
+    IdAuditoriaTelefonosCliente INT IDENTITY(1,1) PRIMARY KEY,
+    TipoAccion NVARCHAR(10),
+    IdTelefonoCliente INT,
+    telefono VARCHAR(20),
+    FechaAccion DATETIME DEFAULT GETDATE()
+);
+
+
+CREATE OR ALTER TRIGGER TGR_AUDITAR_TELEFONOS_CLIENTE
+ON TELEFONOS_CLIENTE
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+	SET NOCOUNT ON;
+	---INSERT
+	INSERT INTO AuditoriaTelefonosCliente (TipoAccion,IdTelefonoCliente, telefono)
+	SELECT 'Insert', i.id_telefono_cliente, i.telefono
+	FROM inserted i
+	WHERE NOT EXISTS (SELECT 1 FROM deleted d WHERE d.id_telefono_cliente = i.id_telefono_cliente);
+	---DELETE
+	INSERT INTO AuditoriaTelefonosCliente(TipoAccion,IdTelefonoCliente, telefono)
+	SELECT 'Delete', d.id_telefono_cliente, d.telefono
+	FROM deleted d
+	WHERE NOT EXISTS (SELECT 1 FROM inserted i WHERE i.id_telefono_cliente = d.id_telefono_cliente);
+	---UPDATE
+	INSERT INTO AuditoriaTelefonosCliente(TipoAccion,IdTelefonoCliente, telefono)
+	SELECT 'Update', i.id_telefono_cliente, i.telefono
+	FROM inserted i
+	JOIN deleted d
+	ON i.id_telefono_cliente = d.id_telefono_cliente
+	WHERE i.telefono <> d.telefono;
+END;
+
+
+-- PRUEBA INSERT --
+INSERT INTO TELEFONOS_CLIENTE (telefono)
+VALUES ('8888-1234');
+
+SELECT * FROM AuditoriaTelefonosCliente;
+
+
+-- PRUEBA UPDATE --
+UPDATE TELEFONOS_CLIENTE
+SET telefono = '84723535'
+WHERE id_telefono_cliente = 5;
+
+SELECT * FROM TELEFONOS_CLIENTE;
+
+
+---TRIGGER PARA AUDITAR LOS CAMBIOS EN LA TABLA CITA---
+CREATE TABLE AuditoriaCita (
+    IdAuditoriaCita INT IDENTITY(1,1) PRIMARY KEY,
+    TipoAccion NVARCHAR(10),
+    IdCita INT,
+    IdCliente INT,
+	FechaAntes DATE,
+	FechaDespues DATE,
+    FechaAccion DATETIME DEFAULT GETDATE()
+);
+
+CREATE OR ALTER TRIGGER TGR_AUDITAR_CITA
+ON CITA
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+	SET NOCOUNT ON;
+	---INSERT
+	INSERT INTO AuditoriaCita (TipoAccion,IdCita, IdCliente, FechaAntes, FechaDespues)
+	SELECT 'Insert', i.id_cita, i.id_cliente, NULL, i.fecha
+	FROM inserted i
+	WHERE NOT EXISTS (SELECT 1 FROM deleted d WHERE d.id_cita = i.id_cita);
+	---DELETE
+	INSERT INTO AuditoriaCita (TipoAccion,IdCita, IdCliente, FechaAntes, FechaDespues)
+	SELECT 'Delete', d.id_cita, d.id_cliente, d.fecha, NULL
+	FROM deleted d
+	WHERE NOT EXISTS (SELECT 1 FROM inserted i WHERE i.id_cita = d.id_cita);
+	---UPDATE
+	INSERT INTO AuditoriaCita (TipoAccion,IdCita, IdCliente, FechaAntes, FechaDespues)
+	SELECT 'Update', i.id_cita, i.id_cliente, d.fecha, i.fecha
+	FROM inserted i
+	JOIN deleted d
+	ON i.id_cita = d.id_cita
+	WHERE 
+    i.fecha <> d.fecha
+	OR i.hora <> d.hora
+	OR i.id_cliente <> d.id_cliente
+	OR i.estado_cita <> d.estado_cita;
+END;
+
+-- PRUEBA INSERT --
+INSERT INTO CITA (id_cliente, estado_cita, fecha, hora)
+VALUES (3, 'espera', '2026-01-15', '09:30:00');
+
+-- PRUEBA DELETE --
+DELETE FROM CITA WHERE id_cita = 2;
+
+SELECT * FROM AuditoriaCita;
+
+-- PRUEBA UPDATE --
+UPDATE CITA
+SET fecha = '2025-01-15'
+WHERE id_cita = 3;
+
+
+ 
+ ---TRIGGER PARA AUDITAR LOS CAMBIOS EN LA TABLA TRABAJADORES---
+ CREATE TABLE AuditoriaTrabajadores (
+    IdAuditoriaTrabajadores INT IDENTITY(1,1) PRIMARY KEY,
+    TipoAccion NVARCHAR(10),
+    IdTrabajador INT,
+	IdRol INT,
+    FechaAccion DATETIME DEFAULT GETDATE()
+);
+
+CREATE OR ALTER TRIGGER TGR_AUDITAR_Trabajadores
+ON TRABAJADORES
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+	SET NOCOUNT ON;
+	---INSERT
+	INSERT INTO AuditoriaTrabajadores (TipoAccion,IdTrabajador, IdRol)
+	SELECT 'Insert', i.id_trabajador, i.id_rol_trabajador
+	FROM inserted i
+	WHERE NOT EXISTS (SELECT 1 FROM deleted d WHERE d.id_trabajador = i.id_trabajador);
+	---DELETE
+	INSERT INTO AuditoriaTrabajadores (TipoAccion,IdTrabajador, IdRol)
+	SELECT 'Delete', d.id_trabajador, d.id_rol_trabajador
+	FROM deleted d
+	WHERE NOT EXISTS (SELECT 1 FROM inserted i WHERE i.id_trabajador = d.id_trabajador);
+	---UPDATE
+	INSERT INTO AuditoriaTrabajadores (TipoAccion,IdTrabajador, IdRol)
+	SELECT 'Update', i.id_trabajador, i.id_rol_trabajador
+	FROM inserted i
+	JOIN deleted d
+	ON i.id_trabajador = d.id_trabajador
+	WHERE 
+    i.id_rol_trabajador <> d.id_rol_trabajador;
+END;
+
+-- PRUEBA INSERT --
+INSERT INTO TRABAJADORES (id_rol_trabajador, nombre, apellido_1, apellido_2)
+VALUES (1, 'Carlos', 'Jiménez', 'Alvarado');
+
+SELECT * FROM AuditoriaTrabajadores;
+
+-- PRUEBA UPDATE --
+UPDATE TRABAJADORES
+SET id_rol_trabajador = 2
+WHERE id_trabajador = 50;
+
+
+ ---TRIGGER PARA AUDITAR LOS CAMBIOS EN LA TABLA EMAIL_TRABAJADORES---
+ CREATE TABLE AuditoriaEmailTrabajadores (
+    IdAuditoriaTrabajadores INT IDENTITY(1,1) PRIMARY KEY,
+    TipoAccion NVARCHAR(10),
+    IdEmailTrabajador INT,
+	EmailAntes VARCHAR(50),
+	EmailDespues VARCHAR(50),
+    FechaAccion DATETIME DEFAULT GETDATE()
+);
+
+CREATE OR ALTER TRIGGER TGR_AUDITAR_Email_Trabajadores
+ON EMAIL_TRABAJADORES
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+	SET NOCOUNT ON;
+	---INSERT
+	INSERT INTO AuditoriaEmailTrabajadores (TipoAccion, IdEmailTrabajador, EmailAntes, EmailDespues)
+	SELECT 'Insert', i.id_email_trabajador, NULL, i.email
+	FROM inserted i
+	WHERE NOT EXISTS (SELECT 1 FROM deleted d WHERE d.id_email_trabajador = i.id_email_trabajador);
+	---DELETE
+	INSERT INTO AuditoriaEmailTrabajadores (TipoAccion, IdEmailTrabajador, EmailAntes, EmailDespues)
+	SELECT 'Delete', d.id_email_trabajador, d.email, NULL
+	FROM deleted d
+	WHERE NOT EXISTS (SELECT 1 FROM inserted i WHERE i.id_email_trabajador = d.id_email_trabajador);
+	---UPDATE
+	INSERT INTO AuditoriaEmailTrabajadores (TipoAccion, IdEmailTrabajador, EmailAntes, EmailDespues)
+	SELECT 'Update', i.id_email_trabajador, d.email, i.email
+	FROM inserted i
+	JOIN deleted d
+	ON i.id_email_trabajador = d.id_email_trabajador
+	WHERE 
+    i.email <> d.email;
+END;
+
+
+
+ -- PRUEBA INSERT --
+INSERT INTO EMAIL_TRABAJADORES (email)
+VALUES ('oscar.gonzalez16@lubricentrola.cr');
+
+SELECT * FROM EMAIL_TRABAJADORES;
+SELECT * FROM AuditoriaEmailTrabajadores;
+
+
+
